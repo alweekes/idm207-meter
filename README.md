@@ -10,7 +10,7 @@ Two interchangeable apps share one protocol spec and one set of test vectors (`a
 |---|---|---|
 | Stack | Python, PyQt6, pyqtgraph, pyserial | TypeScript, Vite, uPlot, Web Serial |
 | Platforms | Windows, Linux, macOS | any OS with Chrome / Edge / Opera / Brave |
-| Install | download from Releases, unzip, run | unzip and serve locally, or open the hosted copy |
+| Install | download from Releases, unzip, run | open the [hosted copy](https://alweekes.github.io/idm207-meter/) (nothing to install) |
 
 ![Desktop app: virtual LCD, gauge, live chart, statistics, logging](docs/desktop-app.png)
 *Desktop app (PyQt6), replaying a capture of a rising DC voltage with a HIGH limit set.*
@@ -27,7 +27,9 @@ Download from the [Releases](../../releases) page:
 - **Desktop:** `idm207-meter-windows-x86_64.zip`, `idm207-meter-macos-arm64.zip`, `idm207-meter-macos-x86_64.zip`,
   `idm207-meter-linux-x86_64.tar.gz`. Unpack and run `idm207-meter`. The builds are unsigned: on macOS
   right-click → Open the first time, on Windows choose "More info → Run anyway" in SmartScreen.
-- **Web:** `idm207-web-meter.zip`. Web Serial needs a secure context, so serve it from localhost:
+- **Web:** open https://alweekes.github.io/idm207-meter/ in Chrome, Edge, Opera or Brave and click Connect. It is
+  rebuilt from `main` whenever the web app changes. To run offline, download `idm207-web-meter.zip`; Web Serial needs
+  a secure context, so serve it from localhost:
   `cd idm207-web-meter && python3 -m http.server 8000`, then open http://localhost:8000 in Chrome.
 
 Or run from source (see `apps/py-meter/README.md` and `apps/web-meter/README.md`).
