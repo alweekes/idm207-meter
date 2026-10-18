@@ -48,7 +48,7 @@ describe("calibration", () => {
     expect(parseCalReply(bytes("55 55 0E 03 58"), 0x58)).toBeUndefined();
   });
   it("round-trips the backup file format identically to Python", () => {
-    const text = readFileSync(`${root}reverse-engineering/calibration-backup-IDM207-03600916-restored.txt`, "utf8");
+    const text = readFileSync(`${root}apps/spec/cal-fixture.txt`, "utf8");
     const cal = calFromText(text);
     expect(cal.size).toBe(256);
     expect(calText(cal, 0xe1, 0xe4)).toBe("'IDM207  '");

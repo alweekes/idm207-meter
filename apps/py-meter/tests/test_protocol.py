@@ -51,7 +51,6 @@ def test_cal_reply_and_text():
     assert p.parse_cal_reply(bytes.fromhex("55 55 0E 03 58"), 0x58) is False  # incomplete
     cal = {0xE1: 0x4449, 0xE2: 0x324D, 0xE3: 0x3730, 0xE4: 0x2020}
     assert p.cal_text(cal, 0xE1, 0xE4) == "'IDM207  '"
-    backup = os.path.join(os.path.dirname(__file__), "..", "..", "..", "reverse-engineering",
-                          "calibration-backup-IDM207-03600916-restored.txt")
+    backup = os.path.join(os.path.dirname(__file__), "..", "..", "spec", "cal-fixture.txt")
     cal = p.cal_from_text(open(backup).read())
     assert len(cal) == 256 and p.cal_diff(cal, p.cal_from_text(p.cal_to_text(cal))) == []
