@@ -12,6 +12,12 @@ Two interchangeable apps share one protocol spec and one set of test vectors (`a
 | Platforms | Windows, Linux, macOS | any OS with Chrome / Edge / Opera / Brave |
 | Install | download from Releases, unzip, run | unzip and serve locally, or open the hosted copy |
 
+![Desktop app: virtual LCD, gauge, live chart, statistics, logging](docs/desktop-app.png)
+*Desktop app (PyQt6), replaying a capture of a rising DC voltage with a HIGH limit set.*
+
+![Web app: same layout in the browser](docs/web-app.png)
+*Web app (TypeScript + Web Serial), same capture.*
+
 See [`apps/COMPARISON.md`](apps/COMPARISON.md) for how they compare.
 
 ## Install
