@@ -42,8 +42,10 @@ so you can try them without a meter.
 ## Troubleshooting
 
 **Web app: "port open but no bytes received" on Linux, while the desktop app works.** A previous program left the
-port's terminal settings in a state Chrome cannot read (before v1.0.2 the desktop app did this). Fix without
-rebooting, with the port closed: `stty -F /dev/ttyS0 min 1 time 0`. The full story is in
+port's terminal settings in a state Chrome cannot read (before v1.0.2 the desktop app did this; other pyserial-based
+tools still do). This is a Chrome bug that is **fixed in Chrome 156** ([issue 559872992](https://issues.chromium.org/issues/559872992)),
+so the simplest cure is to update Chrome. On Chrome 155 or earlier, fix it without rebooting, with the port closed:
+`stty -F /dev/ttyS0 min 1 time 0`. The full story is in
 [`docs/debugging-web-serial-no-data.md`](docs/debugging-web-serial-no-data.md).
 
 ## Protocol in brief

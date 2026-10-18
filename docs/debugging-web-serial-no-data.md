@@ -21,6 +21,22 @@ Quick fix without rebooting: `stty -F /dev/ttyS0 min 1 time 0` (port must not be
 Permanent fix: `serialio.open_port()` restores the settings found at open and never leaves `VMIN=0`; the GUI and
 CLI also close the port on SIGTERM/SIGINT.
 
+## Upstream status
+This is a Chromium bug, already reported by someone else and fixed:
+- Issue: [crbug 559872992](https://issues.chromium.org/issues/559872992), "Web Serial (Linux/POSIX): port reports 'The
+  device has been lost' immediately after open() when the tty's inherited termios has VMIN=0/VTIME=0".
+- Cause (from that issue): `SerialIoHandlerPosix::ConfigurePortImpl()` never set `c_cc[VMIN]`/`c_cc[VTIME]`, and
+  `AttemptRead()` reads straight after open and maps a 0-byte read to `DEVICE_LOST` (`NetworkError`).
+- Fix: [CL 8425442](https://chromium-review.googlesource.com/c/chromium/src/+/8425442), commit `45ccdf6e` ("serial: Set
+  VMIN/VTIME explicitly when configuring POSIX serial ports"), landed on 18 Sep 2026. According to Chromium Dash it first
+  shipped in **156.0.8067.0** (Canary), with **Stable 156 = 156.0.8078.25**.
+- This write-up reproduced the bug on Chrome 155.0.8059.84 (the last major version without the fix). I have not yet
+  re-tested on Chrome 156.
+
+So: **update Chrome to 156 or later.** The `stty` workaround and the Python-side fix below remain useful for Chrome 155
+and earlier, and because other tools (esptool, platformio and anything else built on pyserial) can still leave a port at
+`VMIN=0`.
+
 ## Timeline
 
 ### 1. First hunches (all wrong)
@@ -76,7 +92,8 @@ tty layer (`n_tty_read`; not verified against the kernel source here), a non-blo
 returns `-EAGAIN` only when the line has a read timeout; with `VMIN=0, VTIME=0` it returns 0 first. The trace shows
 Chrome reading the existing termios (`TCGETS2`) and writing it back (`TCSETS2`); it does not show the control
 characters, but the behaviour is consistent with Chrome inheriting `VMIN`/`VTIME` from the previous program.
-The step 6 experiment is what actually proves the cause.
+The step 6 experiment is what actually proves the cause. The upstream issue (see "Upstream status") later confirmed this
+mechanism from Chromium's source: Chrome never set `VMIN`/`VTIME`, and `AttemptRead()` treats a 0-byte read as device lost.
 
 ### 6. Confirmation
 `stty -F /dev/ttyS0 -a` showed `min = 0; time = 0` in the stuck state. `stty -F /dev/ttyS0 min 1 time 0` made the web
@@ -119,5 +136,5 @@ setting, not on the UART, the driver or the attached device, and it reproduces w
 ## Not fixed
 - A `kill -9` of the Python app cannot restore the settings. `reverse-engineering/scripts/poll.py` opens the port with
   raw pyserial and can leave `VMIN=0`; use `stty -F <port> min 1 time 0` afterwards.
-- Chrome could arguably handle a 0-byte read on a tty better. Reproduced on two kernel drivers (8250 and
-  `edgeport_ti_2`) with no device attached; worth reporting upstream (Chromium issue tracker, Web Serial / `Blink>Serial`).
+- Chrome 155 and earlier remain affected (reproduced here on two kernel drivers, 8250 and `edgeport_ti_2`, with no device
+  attached). Fixed in Chrome 156; see "Upstream status".
