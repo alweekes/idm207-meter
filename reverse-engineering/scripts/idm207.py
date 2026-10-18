@@ -13,7 +13,9 @@ Verified against a real meter (fw 0.00.06) on 2026-10-17; see ../README.md.
 The protocol code lives in apps/py-meter/idm207meter (shared with the GUI); this is the CLI.
 """
 import argparse
+import atexit
 import os
+import signal
 import sys
 import time
 
@@ -78,6 +80,9 @@ def main():
         ap.error("port required")
 
     ser = serialio.open_port(a.port)
+    # Close the port on every exit path (incl. SIGTERM) so its terminal settings are restored (see serialio).
+    atexit.register(ser.close)
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     if a.backup_cal or a.compare_cal:
         return cal_command(ser, a)
     if a.csv:

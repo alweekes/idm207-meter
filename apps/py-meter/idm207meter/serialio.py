@@ -9,9 +9,48 @@ from . import protocol as p
 BAUD = 9600
 
 
+def _saved_termios(port):
+    """The port's terminal settings before we touch them (POSIX), with VMIN fixed up; None if unavailable."""
+    try:
+        import os
+        import termios
+        fd = os.open(port, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
+        try:
+            attrs = termios.tcgetattr(fd)
+        finally:
+            os.close(fd)
+    except (ImportError, OSError):
+        return None
+    # pyserial sets VMIN=0 and the kernel keeps it after close. With VMIN=0 an empty read returns 0 instead of
+    # EAGAIN, which Chrome's Web Serial treats as "device lost" (NetworkError). Never hand that state on.
+    if termios.VMIN != termios.VEOF:  # on some platforms the two share a slot; then leave it alone
+        vmin = attrs[6][termios.VMIN]
+        if (vmin[0] if isinstance(vmin, bytes) else vmin) == 0:
+            attrs[6][termios.VMIN] = 1
+    return attrs
+
+
 def open_port(port):
+    """Open the meter's port at 9600 8N1. Closing it puts the terminal settings back as we found them."""
     import serial
-    return serial.Serial(port, BAUD, bytesize=8, parity="N", stopbits=1, timeout=0.1)
+
+    class RestoringSerial(serial.Serial):
+        _saved = None
+
+        def open(self):
+            self._saved = _saved_termios(self.port)
+            super().open()
+
+        def close(self):
+            if self.is_open and self._saved is not None:
+                try:
+                    import termios
+                    termios.tcsetattr(self.fd, termios.TCSANOW, self._saved)
+                except (ImportError, OSError):
+                    pass
+            super().close()
+
+    return RestoringSerial(port, BAUD, bytesize=8, parity="N", stopbits=1, timeout=0.1)
 
 
 def poll_frame(ser, timeout=1.0):

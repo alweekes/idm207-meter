@@ -1,7 +1,9 @@
 """Run the virtual meter:  python -m idm207meter [--replay capture.log]"""
 import argparse
+import signal
 import sys
 
+from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication
 
 from .ui.main_window import MainWindow
@@ -14,6 +16,13 @@ def main():
     app = QApplication([sys.argv[0]] + qt_args)
     w = MainWindow(replay_path=a.replay)
     w.show()
+    # SIGTERM/SIGINT: close the window so the serial port is released and its settings restored.
+    # A timer lets the interpreter run the handlers while Qt's event loop is busy.
+    signal.signal(signal.SIGTERM, lambda *_: w.close())
+    signal.signal(signal.SIGINT, lambda *_: w.close())
+    keepalive = QTimer()
+    keepalive.start(250)
+    keepalive.timeout.connect(lambda: None)
     return app.exec()
 
 
