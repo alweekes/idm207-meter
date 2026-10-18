@@ -105,7 +105,12 @@ setInterval(() => {
   $("rows").textContent = `rows: ${logger.rows.length}`;
   syncHistory();
   if (source instanceof SerialSource && !calBusy) {
-    const state = sendMode ? "SEND mode, waiting for F4" : `${source.polls} polls · ${source.errors} no-reply`;
+    const silent = !sendMode && source.polls >= 4 && source.rxBytes === 0;
+    const state = sendMode
+      ? "SEND mode, waiting for F4"
+      : silent
+        ? "port open but no bytes received: check meter power and cable, and close other tabs or apps using this port"
+        : `${source.polls} polls · ${source.errors} no-reply`;
     setStatus(`Connected · ${ident || "waiting for meter"} · ${state}`);
   }
 }, 250);
@@ -114,7 +119,6 @@ setInterval(() => {
 async function attach(s: Source) {
   await detach();
   source = s;
-  (window as unknown as { dbgSource: Source }).dbgSource = s; // TEMP debug
   s.sendMode = sendRadio().checked;
   s.start({
     frame: onFrame,
@@ -126,6 +130,9 @@ async function attach(s: Source) {
   });
   $("connect").textContent = "Disconnect";
 }
+
+// Release the serial port when the page goes away (reload, navigation, tab close) so the next page can open it.
+addEventListener("pagehide", () => void source?.stop());
 
 async function detach() {
   if (source) await source.stop();

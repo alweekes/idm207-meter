@@ -25,6 +25,7 @@ export class SerialSource implements Source {
   sendMode = false;
   polls = 0;
   errors = 0;
+  rxBytes = 0; // total bytes received since open; 0 after several polls means a silent port
   private buf: number[] = [];
   private reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
   private stopped = false;
@@ -48,12 +49,23 @@ export class SerialSource implements Source {
     this.loopDone = this.run(ev).catch((e) => ev.failed(String(e?.message ?? e)));
   }
 
+  /** Open at 9600 8N1; retry once after a short pause (a previous page or app may still be releasing the port). */
+  private async openPort() {
+    const opts = { baudRate: 9600, dataBits: 8, parity: "none", stopBits: 1, flowControl: "none" } as const;
+    try {
+      await this.port.open(opts);
+    } catch (e) {
+      if ((e as DOMException)?.name === "InvalidStateError") return; // already open: reuse it
+      await sleep(500);
+      await this.port.open(opts);
+    }
+  }
+
   private async run(ev: SourceEvents) {
-    await this.port.open({ baudRate: 9600, dataBits: 8, parity: "none", stopBits: 1, flowControl: "none" });
+    await this.openPort();
     // The meter's RS232 interface is powered from DTR/RTS (silent with both low); pyserial raises them on open.
     await this.port.setSignals({ dataTerminalReady: true, requestToSend: true });
     await sleep(300);
-    console.log("[dbg v2] signals", JSON.stringify(await this.port.getSignals()), JSON.stringify(this.port.getInfo()));
     void this.readLoop();
     let misses = 0;
     while (!this.stopped) {
@@ -95,7 +107,7 @@ export class SerialSource implements Source {
           const { value, done } = await this.reader.read();
           if (done) break;
           if (value) {
-            console.log(`[dbg v2] rx ${value.length} bytes`);
+            this.rxBytes += value.length;
             for (const b of value) this.buf.push(b);
           }
         }
@@ -140,20 +152,6 @@ export class SerialSource implements Source {
       await sleep(10);
     }
     return null;
-  }
-
-  /** TEMP debug: try every DTR/RTS combination and report how many bytes come back. */
-  async probe() {
-    this.calActive = true;
-    await this.busy;
-    for (const [dtr, rts] of [[true, true], [false, false], [true, false], [false, true]]) {
-      await this.port.setSignals({ dataTerminalReady: dtr, requestToSend: rts });
-      await sleep(400);
-      const f = await this.pollFrame(1.5);
-      console.log(`[dbg v2] probe DTR=${dtr} RTS=${rts} -> ${f ? "FRAME" : "nothing"} (buf ${this.buf.length})`);
-    }
-    await this.port.setSignals({ dataTerminalReady: true, requestToSend: true });
-    this.calActive = false;
   }
 
   /** Read all 256 calibration entries (read-only); polling pauses meanwhile. */
