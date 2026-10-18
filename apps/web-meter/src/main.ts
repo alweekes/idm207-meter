@@ -323,6 +323,15 @@ $("log-export").onclick = async () => {
 
 // ---- calibration tools -------------------------------------------------------------------
 const calOut = $("cal-text");
+$("diagnose").onclick = async () => {
+  if (!(source instanceof SerialSource)) {
+    alert("Connect to the meter first.");
+    return;
+  }
+  calOut.textContent = "Running port diagnostics (about 15 s)…";
+  const lines = await source.diagnose();
+  calOut.textContent = ["Port diagnostics", ...lines].join("\n");
+};
 const calBar = $("cal-progress") as HTMLProgressElement;
 
 async function readCal() {
