@@ -4,6 +4,8 @@ A record of how the "web app shows no data, only a reboot fixes it" problem was 
 ends. Fixed in v1.0.2. Environment: Linux (CachyOS, kernel 7.2), Chrome 155, meter on the onboard `/dev/ttyS0`
 (16550A UART), user in the `uucp` group.
 
+(Note: This issue is now fixed in Chrome, from Chrome 156 onwards: https://issues.chromium.org/issues/559872992)
+
 ## Symptom
 - The desktop app (PyQt, pyserial) and the CLI reader always worked.
 - The web app (Web Serial) worked right after a boot, then at some point stopped getting data: the port opened,
