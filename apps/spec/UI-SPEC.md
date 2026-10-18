@@ -8,6 +8,7 @@ can be compared like for like. Protocol details: `reverse-engineering/README.md`
 ```
 ┌ toolbar ───────────────────────────────────────────────────────────────────────┐
 │ Source: [port ▾] [Connect]  | [Replay capture…]  | Mode: (•) Poll ( ) SEND     │
+│                          Meter: IDM207 · s/n 03600916 · fw 0.00.06  (right-aligned) │
 │ status: Connected · IDM207 · s/n 03600916 · fw 0.00.06 · 2 polls/s · 0 errors  │
 ├ LCD ───────────────────────────────────────────────────────────────────────────┤
 │ AUTO  DC  AC   MAX MIN PEAK AH REF Δ % dB dBm MEM SETUP  HI LO   RS232   key:F3 │
@@ -23,6 +24,9 @@ can be compared like for like. Protocol details: `reverse-engineering/README.md`
 │ [Backup calibration…]  [Compare calibration…]   progress / result              │
 └────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+- **Meter identity**: the toolbar always shows `Meter: <model> · s/n <serial> · fw <firmware>` from frame bytes 4–26,
+  updated when it changes (`Meter: –` until the first frame). Works in serial and replay modes.
 
 ## Sources
 - **Serial**: 9600 8N1, DTR and RTS raised (the meter's interface is powered from them; silent if both are low). Poll mode sends `55 55 00 00 AA` every 0.5 s (meter refreshes ~2×/s), with a

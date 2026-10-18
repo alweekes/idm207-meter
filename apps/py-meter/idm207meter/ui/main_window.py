@@ -110,6 +110,9 @@ class MainWindow(QMainWindow):
             row.addWidget(b)
         self.send_radio.toggled.connect(self._mode_changed)
         row.addStretch()
+        self.ident_label = QLabel("Meter: –")
+        self.ident_label.setStyleSheet("font-weight: bold")
+        row.addWidget(self.ident_label)
         return row
 
     def _chart(self):
@@ -235,7 +238,10 @@ class MainWindow(QMainWindow):
     def _on_frame(self, t, f, from_send):
         r = p.decode(f)
         self.reading, self.last_frame_t = r, t
-        self.ident = f"{r.model} · s/n {r.serial} · fw {r.firmware}"
+        ident = f"{r.model} · s/n {r.serial} · fw {r.firmware}"
+        if ident != self.ident:
+            self.ident = ident
+            self.ident_label.setText(f"Meter: {ident}")
         if r.key:
             self.key, self.key_t = r.key, t
         if self.series.add(t, r):

@@ -75,7 +75,11 @@ function onFrame(t: number, f: Uint8Array, send: boolean) {
   reading = r;
   lastFrameT = t;
   fromSend = send;
-  ident = `${r.model} · s/n ${r.serial} · fw ${r.firmware}`;
+  const id = `${r.model} · s/n ${r.serial} · fw ${r.firmware}`;
+  if (id !== ident) {
+    ident = id;
+    $("ident").textContent = `Meter: ${id}`;
+  }
   if (r.key) {
     key = r.key;
     keyT = t;
