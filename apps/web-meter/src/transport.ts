@@ -154,56 +154,6 @@ export class SerialSource implements Source {
     return null;
   }
 
-  /**
-   * Port diagnostics (read-only: only the 00 poll is sent). Pauses polling, then for each DTR/RTS combination
-   * reports the input lines the meter drives and whether a valid frame came back, and finally closes and
-   * reopens the port. Always restores DTR+RTS high. Returns lines of text.
-   */
-  async diagnose(): Promise<string[]> {
-    const out: string[] = [];
-    const sig = async () => {
-      const s = await this.port.getSignals();
-      return `CTS=${+s.clearToSend} DSR=${+s.dataSetReady} DCD=${+s.dataCarrierDetect} RI=${+s.ringIndicator}`;
-    };
-    const probe = async (label: string) => {
-      this.buf.length = 0;
-      const before = this.rxBytes;
-      const f = await this.pollFrame(1.5);
-      out.push(`${label}: ${f ? "FRAME OK" : "no frame"}, ${this.rxBytes - before} bytes received, ${await sig()}`);
-    };
-    this.calActive = true;
-    try {
-      await this.busy;
-      const info = this.port.getInfo();
-      out.push(`port info: ${JSON.stringify(info)}`, `lines on entry: ${await sig()}`, `bytes received since open: ${this.rxBytes}`);
-      for (const [dtr, rts] of [[true, true], [false, false], [true, false], [false, true], [true, true]]) {
-        await this.port.setSignals({ dataTerminalReady: dtr, requestToSend: rts });
-        await sleep(500);
-        await probe(`DTR=${+dtr} RTS=${+rts}`);
-      }
-      // close and reopen the port, as a fresh Connect would
-      await this.reader?.cancel().catch(() => undefined);
-      await sleep(100);
-      await this.port.close();
-      await sleep(500);
-      await this.openPort();
-      await this.port.setSignals({ dataTerminalReady: true, requestToSend: true });
-      void this.readLoop();
-      await sleep(500);
-      await probe("after close + reopen (DTR=1 RTS=1)");
-    } catch (e) {
-      out.push(`diagnostic error: ${(e as Error)?.message ?? e}`);
-    } finally {
-      try {
-        await this.port.setSignals({ dataTerminalReady: true, requestToSend: true });
-      } catch {
-        /* port closed */
-      }
-      this.calActive = false;
-    }
-    return out;
-  }
-
   /** Read all 256 calibration entries (read-only); polling pauses meanwhile. */
   async readAllCal(progress: (n: number) => void) {
     this.calActive = true;

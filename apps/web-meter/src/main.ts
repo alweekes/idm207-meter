@@ -109,7 +109,7 @@ setInterval(() => {
     const state = sendMode
       ? "SEND mode, waiting for F4"
       : silent
-        ? "port open but no bytes received: check meter power and cable, and close other tabs or apps using this port"
+        ? "port open but no bytes received: check meter power and cable. On Linux a program may have left the port unreadable for Chrome: run `stty -F /dev/ttyS0 min 1 time 0` (or reboot)"
         : `${source.polls} polls · ${source.errors} no-reply`;
     setStatus(`Connected · ${ident || "waiting for meter"} · ${state}`);
   }
@@ -323,15 +323,6 @@ $("log-export").onclick = async () => {
 
 // ---- calibration tools -------------------------------------------------------------------
 const calOut = $("cal-text");
-$("diagnose").onclick = async () => {
-  if (!(source instanceof SerialSource)) {
-    alert("Connect to the meter first.");
-    return;
-  }
-  calOut.textContent = "Running port diagnostics (about 15 s)…";
-  const lines = await source.diagnose();
-  calOut.textContent = ["Port diagnostics", ...lines].join("\n");
-};
 const calBar = $("cal-progress") as HTMLProgressElement;
 
 async function readCal() {

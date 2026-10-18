@@ -39,6 +39,13 @@ Windows shows the meter as `COMn`. The meter's cable is 9600 baud, 8N1 (no setup
 Both apps have a replay mode (`--replay reverse-engineering/capture.log`, or *Replay capture…* in the web app)
 so you can try them without a meter.
 
+## Troubleshooting
+
+**Web app: "port open but no bytes received" on Linux, while the desktop app works.** A previous program left the
+port's terminal settings in a state Chrome cannot read (before v1.0.2 the desktop app did this). Fix without
+rebooting, with the port closed: `stty -F /dev/ttyS0 min 1 time 0`. The full story is in
+[`docs/debugging-web-serial-no-data.md`](docs/debugging-web-serial-no-data.md).
+
 ## Protocol in brief
 
 Full write-up: [`reverse-engineering/README.md`](reverse-engineering/README.md). Raw frames from every

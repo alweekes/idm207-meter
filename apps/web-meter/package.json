@@ -1,6 +1,6 @@
 {
   "name": "idm207-web-meter",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "description": "Virtual meter and datalogger for the ISO-TECH IDM207 using Web Serial",
   "type": "module",
