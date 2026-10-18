@@ -25,7 +25,8 @@ WinDMM.EXE is a LabVIEW 5.0.1 built application; the VIs are stored as
     python3 scripts/unz.py vis_compressed vis_decompressed
 
 ## Protocol (verified on a real IDM207, fw 0.00.06, 2026-10-17)
-The IDM207 is a rebadged APPA DMM-30x: the frame matches
+The IDM207 is the ISO-TECH-badged **APPA 207**. The handheld APPA 303 is a different device, but it shares the
+same software (WinDMM) and therefore the same protocol, so the frame matches
 `../WinDMM300-RS232-Protocol-Summary.md` byte for byte. Captures of every
 rotary position are in `capture.log` (decode with `scripts/idm207.py --decode-log capture.log`).
 
@@ -139,7 +140,7 @@ So **0x80 = write model name** (8 bytes, stored in calibration entries E1–E4);
 `calibration-backup-IDM207-03600916.txt`, read with `55 55 0E 01 <idx> cs` for idx 00–FF (works without
 the password; reply payload = idx, value lo, value hi; `0E` with no data reads idx 00). Gains ≈ 0x2200–0x2800,
 offsets small with bit 15 as sign, unused = FFFF. Entries DD–E8 hold text (little-endian byte pairs):
-DD–E0 `APPA303R` (APPA's internal model), **E1–E4 = model name** (`IDM207  `; was overwritten, restored), E5–E8 = serial `03600916`. EA = `00 0A` (password 0A?).
+DD–E0 `APPA303R` (APPA's internal model string, from the shared 300-series firmware family), **E1–E4 = model name** (`IDM207  `; was overwritten, restored), E5–E8 = serial `03600916`. EA = `00 0A` (password 0A?).
 
 ## Menu functions (circle key selects row M1–M4, F1–F4 select column; see `LCD_Table.md`)
 - **M1 STORE** (V AC): main = live input; left = memory location (no unit, sub 08 "number");

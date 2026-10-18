@@ -1,6 +1,6 @@
 # ISO-TECH IDM207 virtual meter and protocol notes
 
-Read an **ISO-TECH IDM207** multimeter (a rebadged **APPA 303**) over its RS232 port without the original
+Read an **ISO-TECH IDM207** multimeter (the same meter as the **APPA 207**, sold under the ISO-TECH name) over its RS232 port without the original
 2006 Windows program: a virtual LCD, live chart and statistics, CSV datalogging, SEND-key capture and
 read-only calibration backup/compare. The serial protocol was reverse engineered and verified on a real meter.
 
@@ -43,7 +43,8 @@ so you can try them without a meter.
 
 Full write-up: [`reverse-engineering/README.md`](reverse-engineering/README.md). Raw frames from every
 rotary position and menu: [`reverse-engineering/capture.log`](reverse-engineering/capture.log).
-The frame layout agrees with APPA's 300-series addendum, summarised in
+The IDM207 is the ISO-TECH-badged APPA 207. It uses the same protocol as the APPA 300 series (the handheld
+APPA 303 and relatives share the WinDMM software), and the frame layout agrees with APPA's 300-series addendum, summarised in
 [`WinDMM300-RS232-Protocol-Summary.md`](WinDMM300-RS232-Protocol-Summary.md).
 
 - 9600 baud, 8N1. PC sends `55 55 00 00 AA`; the meter answers with a 59-byte frame starting `55 55 00 36`.

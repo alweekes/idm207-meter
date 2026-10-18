@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read an ISO-TECH IDM207 (APPA DMM-30x protocol) over RS232.
+"""Read an ISO-TECH IDM207 (APPA 207, shares the APPA 300-series protocol) over RS232.
 
     pip install pyserial
     python3 idm207.py /dev/ttyS0                 # print readings once a second
