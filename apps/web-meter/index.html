@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IDM207 Virtual Meter</title>
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+  <div id="unsupported" class="banner" hidden>
+    This browser has no Web Serial support. Use Chrome, Edge, Opera or Brave on Windows, Linux or macOS
+    (replay still works here).
+  </div>
+  <header class="toolbar">
+    <label>Port
+      <select id="port" title="Ports you have allowed for this page; 'Add port…' opens Chrome's port picker">
+        <option value="add">Add port…</option>
+      </select>
+    </label>
+    <button id="connect">Connect</button>
+    <label class="file">Replay capture…<input id="replay" type="file" accept=".log,.txt"></label>
+    <span class="sep"></span>
+    Mode:
+    <label><input type="radio" name="mode" value="poll" checked> Poll</label>
+    <label><input type="radio" name="mode" value="send"> SEND (F4)</label>
+  </header>
+
+  <section class="top"><div id="lcd"></div><div id="arc"></div></section>
+
+  <section class="mid">
+    <div id="chart"></div>
+    <aside class="panel">
+      <h2>Statistics</h2>
+      <dl>
+        <dt>Min</dt><dd id="st-min">–</dd>
+        <dt>Max</dt><dd id="st-max">–</dd>
+        <dt>Mean</dt><dd id="st-mean">–</dd>
+        <dt>Count</dt><dd id="st-count">0</dd>
+        <dt>OL</dt><dd id="st-ol">0</dd>
+      </dl>
+      <label>Window
+        <select id="window">
+          <option value="60">1 min</option><option value="300">5 min</option>
+          <option value="1800">30 min</option><option value="0">all</option>
+        </select>
+      </label>
+      <button id="reset">Reset</button>
+    </aside>
+  </section>
+
+  <section class="bottom">
+    <div class="panel">
+      <h2>Logging</h2>
+      <label>Interval
+        <select id="interval">
+          <option>0.5</option><option selected>1</option><option>2</option><option>5</option>
+          <option>10</option><option>30</option><option>60</option>
+        </select> s
+      </label>
+      <button id="log-start">Start</button>
+      <button id="log-stop" disabled>Stop</button>
+      <button id="log-clear">Clear</button>
+      <span id="rows">rows: 0</span>
+      <button id="log-export">Export CSV…</button>
+      <div id="history" class="history" aria-label="Logged values"></div>
+    </div>
+    <div class="panel">
+      <h2>Calibration tools (read-only)</h2>
+      <button id="cal-backup">Backup calibration…</button>
+      <label class="file">Compare calibration…<input id="cal-compare" type="file" accept=".txt"></label>
+      <progress id="cal-progress" max="256" value="0"></progress>
+      <pre id="cal-text"></pre>
+    </div>
+  </section>
+
+  <footer id="status">Not connected</footer>
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>

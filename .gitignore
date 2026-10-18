@@ -1,0 +1,28 @@
+# Only the original work is published. Vendor installers, manuals, binaries and
+# material extracted from them stay local.
+/Andrew/
+/CalWIN300/
+/AUTORUN.INF
+/RS.ICO
+/Readme.doc
+/ReadMe.txt
+/setup.exe
+/Thumbs.db
+/*.pdf
+/HANDOFF.md
+/idm207-log-*.csv
+/apps/py-meter/idm207-log-*.csv
+/reverse-engineering/vis_compressed/
+/reverse-engineering/vis_decompressed/
+/reverse-engineering/blocks/
+/reverse-engineering/calwin300/
+/reverse-engineering/calibration-backup-*
+._*
+.DS_Store
+__pycache__/
+.venv/
+.pytest_cache/
+node_modules/
+dist/
+build/
+*.egg-info/

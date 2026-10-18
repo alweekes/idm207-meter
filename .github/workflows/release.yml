@@ -1,0 +1,77 @@
+name: release
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-22.04, name: linux-x86_64 }
+          - { os: windows-latest, name: windows-x86_64 }
+          - { os: macos-latest, name: macos-arm64 }
+          - { os: macos-15-intel, name: macos-x86_64 }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: apps/py-meter
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Linux Qt runtime libraries
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-shape0
+      - run: pip install . pyinstaller pytest
+      - run: python -m pytest -q
+        env: { QT_QPA_PLATFORM: offscreen }
+      - run: pyinstaller --noconfirm --windowed --name idm207-meter run_meter.py
+      - name: Package
+        shell: bash
+        run: |
+          cd dist
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            ditto -c -k --keepParent idm207-meter.app ../idm207-meter-${{ matrix.name }}.zip
+          elif [ "$RUNNER_OS" = "Windows" ]; then
+            7z a ../idm207-meter-${{ matrix.name }}.zip idm207-meter
+          else
+            tar czf ../idm207-meter-${{ matrix.name }}.tar.gz idm207-meter
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.name }}
+          path: apps/py-meter/idm207-meter-*
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web-meter
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci && npm test && npm run build
+      - run: cd dist && zip -r ../idm207-web-meter.zip .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: apps/web-meter/idm207-web-meter.zip
+
+  publish:
+    needs: [desktop, web]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: out, merge-multiple: true }
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" out/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --notes "See README for install and usage." || gh release upload "$GITHUB_REF_NAME" out/* --repo "$GITHUB_REPOSITORY" --clobber

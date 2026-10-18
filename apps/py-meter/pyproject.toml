@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "idm207-meter"
+version = "1.0.0"
+description = "Virtual meter and datalogger for the ISO-TECH IDM207 (APPA 300 series) over RS232"
+requires-python = ">=3.10"
+dependencies = ["PyQt6>=6.5", "pyqtgraph>=0.13", "pyserial>=3.5"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.gui-scripts]
+idm207-meter = "idm207meter.__main__:main"
+
+[tool.setuptools]
+packages = ["idm207meter", "idm207meter.ui"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
