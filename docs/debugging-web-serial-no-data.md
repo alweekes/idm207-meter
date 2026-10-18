@@ -83,6 +83,20 @@ The step 6 experiment is what actually proves the cause.
 app work immediately, with no reboot. A deliberate round trip proved the cause: set `min 0`, open and close the port
 with the old pyserial code, and it stays 0; with the fixed code it comes back as 1.
 
+### 6b. It is not specific to the onboard UART
+To check the problem was not a quirk of the 8250 driver, the same Web Serial read test was run on a USB serial
+adapter: an Inside Out Networks Edgeport/2 (USB 0x1608:0x0205, kernel driver `edgeport_ti_2`, `/dev/ttyUSB0` and
+`/dev/ttyUSB1`) with **nothing connected to either port**. The test only listens for 2 s, sends nothing, and was
+run with the port closed and the terminal settings set beforehand with `stty`:
+
+| Terminal setting | Web Serial read, both USB ports |
+|---|---|
+| `min 0 time 0` | `NetworkError` after ~150 ms, 0 bytes |
+| `min 1 time 0` | waits the full 2 s, no error (`error=none`, ~2.1 s) |
+
+(The onboard port fails in ~10 ms; USB is slower because of USB latency.) So the failure depends on the terminal
+setting, not on the UART, the driver or the attached device, and it reproduces with nothing attached.
+
 ### 7. The fix
 - `apps/py-meter/idm207meter/serialio.py`: `open_port()` returns a `serial.Serial` subclass that saves the termios
   settings before opening and restores them on close, forcing `VMIN` to 1 if it was 0 (guarded for platforms where
@@ -105,4 +119,5 @@ with the old pyserial code, and it stays 0; with the fixed code it comes back as
 ## Not fixed
 - A `kill -9` of the Python app cannot restore the settings. `reverse-engineering/scripts/poll.py` opens the port with
   raw pyserial and can leave `VMIN=0`; use `stty -F <port> min 1 time 0` afterwards.
-- Chrome could arguably handle a 0-byte read on a tty better. This is worth reporting upstream.
+- Chrome could arguably handle a 0-byte read on a tty better. Reproduced on two kernel drivers (8250 and
+  `edgeport_ti_2`) with no device attached; worth reporting upstream (Chromium issue tracker, Web Serial / `Blink>Serial`).
