@@ -92,3 +92,11 @@ def test_arc_scale():
     assert s.bipolar and s.fraction(0) == 0.5 and s.fraction(-2) == 0 and s.fraction(99) == 1
     s.reset()
     assert (s.fs, s.bipolar) == (1.0, False)
+
+
+def test_logger_long_interval():
+    lg = model.Logger(interval=300.0)
+    lg.start()
+    r = frame(VDC)
+    logged = [t for t in (1000.0 + 0.5 * k for k in range(2 * 1200)) if lg.offer(t, r)]   # 20 min at 2 Hz
+    assert logged == [1000.0, 1300.0, 1600.0, 1900.0]

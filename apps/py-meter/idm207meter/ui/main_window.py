@@ -16,7 +16,7 @@ from .arc import ArcMeter
 from .lcd import LcdWidget
 
 WINDOWS = [("1 min", 60), ("5 min", 300), ("30 min", 1800), ("all", None)]
-INTERVALS = [0.5, 1, 2, 5, 10, 30, 60]
+INTERVALS = [0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600, 900, 1800, 3600]  # s; minutes and hours for long runs
 KEY_HOLD = 2.0     # seconds a key code stays shown
 STALE_AFTER = 3    # missed polls before the LCD dims
 
@@ -43,6 +43,10 @@ def list_ports():
     ports = [d for d in ports if _real_uart(d)]
     # onboard ports first (this meter is on ttyS0), then USB adapters
     return sorted(ports, key=lambda d: (not os.path.basename(d).startswith("ttyS"), d))
+
+
+def interval_label(s):
+    return f"{s // 3600:g} h" if s >= 3600 else f"{s // 60:g} min" if s >= 60 else f"{s:g} s"
 
 
 def fmt_num(v):
@@ -152,7 +156,7 @@ class MainWindow(QMainWindow):
         outer.addWidget(self.history, 1)
         lay.addWidget(QLabel("Interval"))
         self.interval_box = QComboBox()
-        self.interval_box.addItems([f"{i} s" for i in INTERVALS])
+        self.interval_box.addItems([interval_label(i) for i in INTERVALS])
         self.interval_box.setCurrentIndex(1)
         lay.addWidget(self.interval_box)
         self.to_file_box = QCheckBox("Log to file")

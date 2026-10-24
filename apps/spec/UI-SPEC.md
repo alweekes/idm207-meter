@@ -67,7 +67,7 @@ can be compared like for like. Protocol details: `reverse-engineering/README.md`
 - Reset clears the series and stats.
 
 ## Logging
-- Interval 0.5 / 1 / 2 / 5 / 10 / 30 / 60 s: on each tick record the latest reading (if newer than the
+- Interval 0.5 / 1 / 2 / 5 / 10 / 30 s, 1 / 2 / 5 / 10 / 15 / 30 min, 1 h (labelled like that): on each tick record the latest reading (if newer than the
   last recorded one). In SEND mode every received frame is recorded instead.
 - Rows kept in memory (runs of minutes to hours). Start / Stop / Clear; row counter (rows since Clear).
 - **Log to file** (for long runs, hours to days): when ticked, Start asks for a file (default

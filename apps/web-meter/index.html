@@ -55,9 +55,12 @@
       <h2>Logging</h2>
       <label>Interval
         <select id="interval">
-          <option>0.5</option><option selected>1</option><option>2</option><option>5</option>
-          <option>10</option><option>30</option><option>60</option>
-        </select> s
+          <option value="0.5">0.5 s</option><option value="1" selected>1 s</option><option value="2">2 s</option>
+          <option value="5">5 s</option><option value="10">10 s</option><option value="30">30 s</option>
+          <option value="60">1 min</option><option value="120">2 min</option><option value="300">5 min</option>
+          <option value="600">10 min</option><option value="900">15 min</option><option value="1800">30 min</option>
+          <option value="3600">1 h</option>
+        </select>
       </label>
       <label title="Write each row to a CSV file as it is logged (for long runs)"><input id="log-to-file" type="checkbox"> Log to file</label>
       <button id="log-start">Start</button>

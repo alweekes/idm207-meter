@@ -46,6 +46,14 @@ describe("model", () => {
     expect(lg.offer(5, r, true) && lg.offer(5.1, r, true)).toBe(true);
   });
 
+  it("logger with a long interval logs once per interval", () => {
+    const lg = new Logger(300);
+    lg.start();
+    const r = frame(VDC);
+    const logged = Array.from({ length: 2 * 1200 }, (_, k) => 1000 + 0.5 * k).filter((t) => lg.offer(t, r)); // 20 min at 2 Hz
+    expect(logged).toEqual([1000, 1300, 1600, 1900]);
+  });
+
   it("logger with a sink writes every row and keeps only the last HISTORY_ROWS in memory", () => {
     const lines: string[] = [];
     const lg = new Logger();
