@@ -137,12 +137,26 @@ class ArcScale:
         return [(i / n, lo + (self.fs - lo) * i / n) for i in range(n + 1)]
 
 
+HISTORY_ROWS = 2000  # rows kept in memory (and in the history list) while logging to a file
+
+
+def csv_header():
+    return "iso_time," + p.CSV_HEADER
+
+
+def csv_line(t, r):
+    return f"{datetime.fromtimestamp(t).isoformat(timespec='milliseconds')},{p.csv_row(t, r)}"
+
+
 @dataclass
 class Logger:
-    """In-memory data log (UI-SPEC.md: Logging)."""
+    """Data log (UI-SPEC.md: Logging). With a sink, every row is also passed to it as a CSV line and only the
+    last HISTORY_ROWS stay in memory, so a file log can run for days."""
     interval: float = 1.0
     running: bool = False
     rows: list = field(default_factory=list)  # (epoch, Reading)
+    count: int = 0                             # rows logged since the last clear (rows may be trimmed)
+    sink: object = None                        # callable(csv_line) or None
     _last_tick: float = 0.0
     _last_frame_t: float = -1.0
 
@@ -155,6 +169,7 @@ class Logger:
 
     def clear(self):
         self.rows.clear()
+        self.count = 0
         self._last_frame_t = -1.0
 
     def offer(self, t, r, send_mode=False):
@@ -170,13 +185,15 @@ class Logger:
             return False
         self._last_frame_t = t
         self.rows.append((t, r))
+        self.count += 1
+        if self.sink:
+            self.sink(csv_line(t, r))
+            if len(self.rows) > HISTORY_ROWS:
+                del self.rows[: len(self.rows) - HISTORY_ROWS]
         return True
 
     def csv(self):
-        lines = ["iso_time," + p.CSV_HEADER]
-        for t, r in self.rows:
-            iso = datetime.fromtimestamp(t).isoformat(timespec="milliseconds")
-            lines.append(f"{iso},{p.csv_row(t, r)}")
+        lines = [csv_header()] + [csv_line(t, r) for t, r in self.rows]
         return "\n".join(lines) + "\n"
 
 

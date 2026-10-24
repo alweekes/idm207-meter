@@ -19,7 +19,7 @@ can be compared like for like. Protocol details: `reverse-engineering/README.md`
 │ main value vs time (s)                      │ min / max / mean / count / OL    │
 │                                             │ window: [1 min ▾]  [Reset]       │
 ├ logging ─────────────────────────────────────────────────────────────────────── ┤
-│ interval [1 s ▾]  [Start] [Stop] [Clear]   rows: 123   [Export CSV…]            │
+│ interval [1 s ▾] [x] Log to file [Start] [Stop] [Clear] rows: 123 → f.csv [Export CSV…] │
 ├ tools ─────────────────────────────────────────────────────────────────────────┤
 │ [Backup calibration…]  [Compare calibration…]   progress / result              │
 └────────────────────────────────────────────────────────────────────────────────┘
@@ -69,9 +69,17 @@ can be compared like for like. Protocol details: `reverse-engineering/README.md`
 ## Logging
 - Interval 0.5 / 1 / 2 / 5 / 10 / 30 / 60 s: on each tick record the latest reading (if newer than the
   last recorded one). In SEND mode every received frame is recorded instead.
-- Rows kept in memory (runs of minutes to hours). Start / Stop / Clear; row counter.
+- Rows kept in memory (runs of minutes to hours). Start / Stop / Clear; row counter (rows since Clear).
+- **Log to file** (for long runs, hours to days): when ticked, Start asks for a file (default
+  `idm207-log-YYYYMMDD-HHMMSS.csv`; cancel = not started), writes the CSV header and then every logged row in
+  the Export CSV format. Desktop writes each row as it is logged; web buffers rows and appends them every 5 s
+  (and on Stop / page close), so a crash loses at most 5 s. Only the last 2000 rows stay in memory (Export CSV
+  then saves those; the file has all of them). The counter shows `rows: N → <file name>`. Stop closes the
+  file; a write error stops logging with a message. The checkbox is locked while logging. The web app needs
+  the File System Access API (Chrome / Edge; Brave behind a flag).
 - History: scrolling list under the logging buttons (time `HH:MM:SS.mmm`, function, main value with unit),
-  one line per logged row, stays at the newest row unless the user has scrolled up; Clear empties it.
+  one line per logged row (the latest 2000), stays at the newest row unless the user has scrolled up; Clear
+  empties it.
 - Export CSV: header `iso_time,` + `CSV_HEADER` from `test-vectors.json`, then
   `<ISO-8601 local time with ms>,` + `csv_row(epoch_seconds, reading)` (identical column formatting in both apps,
   e.g. `2026-10-17T20:18:33.950,1792264713.950,V DC,9.793,V,input,,,,,,,`).

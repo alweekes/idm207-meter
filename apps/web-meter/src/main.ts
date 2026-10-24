@@ -1,7 +1,8 @@
 // Wiring: sources, LCD, chart + stats, logging, calibration tools (apps/spec/UI-SPEC.md).
 import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
-import { annunciators, displayText, Logger, prettyUnit, readCapture, Series } from "./model";
+import { FileLog } from "./filelog";
+import { annunciators, csvHeader, displayText, HISTORY_ROWS, Logger, prettyUnit, readCapture, Series } from "./model";
 import { CAL_TEXT, calDiff, calFromText, calText, calToText, decode, Reading } from "./protocol";
 import { ReplaySource, SerialSource, Source } from "./transport";
 import { arcScale, renderArc } from "./ui/arc";
@@ -9,6 +10,7 @@ import { renderLcd } from "./ui/lcd";
 
 const KEY_HOLD = 2; // s a key code stays shown
 const STALE_AFTER = 1.5; // s without a frame (3 polls) before the LCD dims
+const FLUSH_EVERY = 5; // s between writes of buffered rows to the log file
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const statusEl = $("status");
@@ -23,6 +25,7 @@ let fromSend = false;
 let calBusy = false;
 const series = new Series();
 const logger = new Logger();
+let fileLog: FileLog | null = null; // set while logging to a file
 
 // ---- LCD ---------------------------------------------------------------------------------
 function drawLcd(stale = false) {
@@ -102,7 +105,7 @@ setInterval(() => {
   }
   const sendMode = source?.sendMode ?? false;
   if (source && reading && now - lastFrameT > STALE_AFTER && !sendMode) drawLcd(true);
-  $("rows").textContent = `rows: ${logger.rows.length}`;
+  $("rows").textContent = `rows: ${logger.count}${fileLog ? ` → ${fileLog.name}` : ""}`;
   syncHistory();
   if (source instanceof SerialSource && !calBusy) {
     const silent = !sendMode && source.polls >= 4 && source.rxBytes === 0;
@@ -132,7 +135,10 @@ async function attach(s: Source) {
 }
 
 // Release the serial port when the page goes away (reload, navigation, tab close) so the next page can open it.
-addEventListener("pagehide", () => void source?.stop());
+addEventListener("pagehide", () => {
+  void fileLog?.flush().catch(() => {});
+  void source?.stop();
+});
 
 async function detach() {
   if (source) await source.stop();
@@ -245,36 +251,74 @@ for (const radio of document.querySelectorAll<HTMLInputElement>('input[name="mod
 }
 
 // ---- logging -----------------------------------------------------------------------------
-$("log-start").onclick = () => {
+const toFileBox = $("log-to-file") as HTMLInputElement;
+
+function setLogButtons(running: boolean) {
+  ($("log-start") as HTMLButtonElement).disabled = running;
+  ($("log-stop") as HTMLButtonElement).disabled = !running;
+  toFileBox.disabled = running;
+}
+
+$("log-start").onclick = async () => {
+  if (toFileBox.checked) {
+    if (!FileLog.supported()) {
+      alert("This browser cannot write files directly. In Brave, enable brave://flags/#file-system-access-api; or log in memory and use Export CSV.");
+      return;
+    }
+    try {
+      fileLog = await FileLog.create(`idm207-log-${stamp()}.csv`, csvHeader());
+    } catch (e) {
+      alert(`Cannot write the log file: ${(e as Error).message}`);
+      return;
+    }
+    if (!fileLog) return;
+    const log = fileLog;
+    logger.sink = (line) => log.append(line);
+  }
   logger.interval = Number(($("interval") as HTMLSelectElement).value);
   logger.start();
-  ($("log-start") as HTMLButtonElement).disabled = true;
-  ($("log-stop") as HTMLButtonElement).disabled = false;
+  setLogButtons(true);
 };
-$("log-stop").onclick = () => {
+
+async function stopLogging(error?: string) {
   logger.stop();
-  ($("log-start") as HTMLButtonElement).disabled = false;
-  ($("log-stop") as HTMLButtonElement).disabled = true;
-};
+  logger.sink = null;
+  setLogButtons(false);
+  const log = fileLog;
+  fileLog = null;
+  if (!log) return;
+  try {
+    await log.flush();
+    setStatus(error ? `Logging stopped: ${error}` : `Log saved to ${log.name}`);
+  } catch (e) {
+    error = `${error ?? ""} ${(e as Error).message}`.trim();
+  }
+  if (error) alert(`Logging stopped: cannot write ${log.name}: ${error}`);
+}
+$("log-stop").onclick = () => void stopLogging();
+
+setInterval(() => {
+  fileLog?.flush().catch((e) => stopLogging((e as Error).message));
+}, FLUSH_EVERY * 1000);
+
 $("log-clear").onclick = () => {
   logger.clear();
   syncHistory();
 };
 
-/** Mirror logger.rows into the history list (append new rows, stay scrolled to the end). */
+/** Mirror new logged rows into the history list (keep the last HISTORY_ROWS, stay scrolled to the end). */
 let shown = 0;
 function syncHistory() {
   const el = $("history");
-  const rows = logger.rows;
-  if (shown > rows.length) {
+  if (shown > logger.count) {
     el.replaceChildren();
     shown = 0;
   }
-  if (shown === rows.length) return;
+  const n = Math.min(logger.count - shown, logger.rows.length);
+  if (!n) return;
   const follow = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
   const frag = document.createDocumentFragment();
-  for (; shown < rows.length; shown++) {
-    const [t, r] = rows[shown];
+  for (const [t, r] of logger.rows.slice(-n)) {
     const row = document.createElement("div");
     for (const text of [new Date(t * 1000).toTimeString().slice(0, 8) + "." + String(Math.round(t * 1000) % 1000).padStart(3, "0"),
                         r.function, displayText(r.main)]) {
@@ -285,6 +329,8 @@ function syncHistory() {
     frag.append(row);
   }
   el.append(frag);
+  while (el.childElementCount > HISTORY_ROWS) el.firstElementChild!.remove();
+  shown = logger.count;
   if (follow) el.scrollTop = el.scrollHeight;
 }
 

@@ -137,10 +137,18 @@ export function isoLocal(epochSeconds: number): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(), 3)}`;
 }
 
-/** In-memory data log (UI-SPEC.md: Logging). */
+export const HISTORY_ROWS = 2000; // rows kept in memory (and in the history list) while logging to a file
+
+export const csvHeader = () => "iso_time," + CSV_HEADER;
+export const csvLine = (t: number, r: Reading) => `${isoLocal(t)},${csvRow(t, r)}`;
+
+/** Data log (UI-SPEC.md: Logging). With a sink, every row is also passed to it as a CSV line and only the
+ *  last HISTORY_ROWS stay in memory, so a file log can run for days. */
 export class Logger {
   running = false;
   rows: [number, Reading][] = [];
+  count = 0; // rows logged since the last clear (rows may be trimmed)
+  sink: ((line: string) => void) | null = null;
   private lastTick = 0;
   private lastFrameT = -1;
   constructor(public interval = 1.0) {}
@@ -154,6 +162,7 @@ export class Logger {
   }
   clear() {
     this.rows = [];
+    this.count = 0;
     this.lastFrameT = -1;
   }
 
@@ -168,13 +177,16 @@ export class Logger {
     if (t === this.lastFrameT) return false;
     this.lastFrameT = t;
     this.rows.push([t, r]);
+    this.count++;
+    if (this.sink) {
+      this.sink(csvLine(t, r));
+      if (this.rows.length > HISTORY_ROWS) this.rows.splice(0, this.rows.length - HISTORY_ROWS);
+    }
     return true;
   }
 
   csv(): string {
-    const lines = ["iso_time," + CSV_HEADER];
-    for (const [t, r] of this.rows) lines.push(`${isoLocal(t)},${csvRow(t, r)}`);
-    return lines.join("\n") + "\n";
+    return [csvHeader(), ...this.rows.map(([t, r]) => csvLine(t, r))].join("\n") + "\n";
   }
 }
 

@@ -5,7 +5,7 @@ from datetime import datetime
 
 import pyqtgraph as pg
 from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import (QAbstractItemView, QButtonGroup, QComboBox, QFileDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel,
+from PyQt6.QtWidgets import (QAbstractItemView, QButtonGroup, QCheckBox, QComboBox, QFileDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel,
                              QMainWindow, QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QRadioButton,
                              QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
@@ -60,6 +60,8 @@ class MainWindow(QMainWindow):
         self.key, self.key_t = "", 0.0
         self.series = model.Series()
         self.logger = model.Logger()
+        self.log_file = None      # open CSV file while logging to a file
+        self._shown = 0           # logged rows already in the history table
         self.cal_mode = None      # "backup" | "compare"
         self.compare_to = None
 
@@ -153,6 +155,9 @@ class MainWindow(QMainWindow):
         self.interval_box.addItems([f"{i} s" for i in INTERVALS])
         self.interval_box.setCurrentIndex(1)
         lay.addWidget(self.interval_box)
+        self.to_file_box = QCheckBox("Log to file")
+        self.to_file_box.setToolTip("Write each row to a CSV file as it is logged (for long runs)")
+        lay.addWidget(self.to_file_box)
         self.start_btn = QPushButton("Start", clicked=self._log_start)
         self.stop_btn = QPushButton("Stop", clicked=self._log_stop, enabled=False)
         lay.addWidget(self.start_btn)
@@ -260,7 +265,8 @@ class MainWindow(QMainWindow):
         if self.worker and self.reading and now - self.last_frame_t > STALE_AFTER * 0.5 and not self.send_radio.isChecked():
             self.lcd.set_stale(True)
             self.arc.set_stale(True)
-        self.rows_label.setText(f"rows: {len(self.logger.rows)}")
+        to = f" → {os.path.basename(self.log_file.name)}" if self.log_file else ""
+        self.rows_label.setText(f"rows: {self.logger.count}{to}")
         self._sync_history()
         if isinstance(self.worker, SerialWorker) and self.worker.isRunning() and not self.cal_mode:
             w = self.worker
@@ -284,38 +290,77 @@ class MainWindow(QMainWindow):
 
     # ---- logging ------------------------------------------------------------------------------
     def _log_start(self):
+        if self.to_file_box.isChecked():
+            name = time.strftime("idm207-log-%Y%m%d-%H%M%S.csv")
+            path, _ = QFileDialog.getSaveFileName(self, "Log to file", name, "CSV (*.csv)")
+            if not path:
+                return
+            try:
+                self.log_file = open(path, "w", newline="", buffering=1)  # line-buffered: each row reaches the disk
+                self.log_file.write(model.csv_header() + "\n")
+            except OSError as e:
+                self._close_log_file()
+                QMessageBox.warning(self, "IDM207", f"Cannot write {path}: {e}")
+                return
+            self.logger.sink = self._write_log_line
         self.logger.interval = INTERVALS[self.interval_box.currentIndex()]
         self.logger.start()
         self.start_btn.setEnabled(False)
         self.stop_btn.setEnabled(True)
+        self.to_file_box.setEnabled(False)
 
     def _log_stop(self):
         self.logger.stop()
+        if self.log_file:
+            self.statusBar().showMessage(f"Log saved to {self.log_file.name}", 5000)
+        self._close_log_file()
         self.start_btn.setEnabled(True)
         self.stop_btn.setEnabled(False)
+        self.to_file_box.setEnabled(True)
+
+    def _write_log_line(self, line):
+        try:
+            self.log_file.write(line + "\n")
+        except OSError as e:
+            path = self.log_file.name
+            self._log_stop()
+            QMessageBox.warning(self, "IDM207", f"Logging stopped: cannot write {path}: {e}")
+
+    def _close_log_file(self):
+        self.logger.sink = None
+        if self.log_file:
+            try:
+                self.log_file.close()
+            except OSError:
+                pass
+            self.log_file = None
 
     def _log_clear(self):
         self.logger.clear()
         self._sync_history()
 
     def _sync_history(self):
-        """Mirror logger.rows into the history table (append new rows, keep scrolled to the end)."""
-        rows, n = self.logger.rows, self.history.rowCount()
-        if n > len(rows):
+        """Mirror new logged rows into the history table (keep the last HISTORY_ROWS, stay scrolled to the end)."""
+        lg = self.logger
+        if self._shown > lg.count:   # cleared
             self.history.setRowCount(0)
-            n = 0
-        if n == len(rows):
+            self._shown = 0
+        new = min(lg.count - self._shown, len(lg.rows))
+        if not new:
             return
         bar = self.history.verticalScrollBar()
         follow = bar.value() >= bar.maximum() - 2
         self.history.setUpdatesEnabled(False)
-        self.history.setRowCount(len(rows))
-        for i in range(n, len(rows)):
-            t, r = rows[i]
+        for t, r in lg.rows[-new:]:
+            i = self.history.rowCount()
+            self.history.insertRow(i)
             m = r.main
             val = model.display_text(m) if m else ""
             for col, text in enumerate((datetime.fromtimestamp(t).strftime("%H:%M:%S.%f")[:-3], r.function, val)):
                 self.history.setItem(i, col, QTableWidgetItem(text))
+        for _ in range(self.history.rowCount() - model.HISTORY_ROWS):
+            self.history.removeRow(0)
+        self._shown = lg.count
         self.history.setUpdatesEnabled(True)
         if follow:
             self.history.scrollToBottom()
@@ -373,5 +418,6 @@ class MainWindow(QMainWindow):
         self.cal_text.setPlainText("\n".join(lines))
 
     def closeEvent(self, e):  # noqa: N802 (Qt override)
+        self._close_log_file()
         self._detach()
         super().closeEvent(e)

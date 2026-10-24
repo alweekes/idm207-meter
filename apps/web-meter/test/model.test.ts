@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { ANNUNCIATORS, annunciators, ArcScale, niceCeil, displayText, Logger, readCapture, Series } from "../src/model";
+import { ANNUNCIATORS, annunciators, ArcScale, csvLine, HISTORY_ROWS, niceCeil, displayText, Logger, readCapture, Series } from "../src/model";
 import { csvRow, CSV_HEADER, decode } from "../src/protocol";
 
 const root = new URL("../../..", import.meta.url).pathname;
@@ -44,6 +44,22 @@ describe("model", () => {
     lg.clear();
     lg.start();
     expect(lg.offer(5, r, true) && lg.offer(5.1, r, true)).toBe(true);
+  });
+
+  it("logger with a sink writes every row and keeps only the last HISTORY_ROWS in memory", () => {
+    const lines: string[] = [];
+    const lg = new Logger();
+    lg.sink = (l) => lines.push(l);
+    lg.start();
+    const r = frame(VDC);
+    const n = HISTORY_ROWS + 5;
+    for (let k = 0; k < n; k++) lg.offer(1000 + k, r, true);
+    expect([lg.count, lines.length, lg.rows.length, lg.rows[0][0]]).toEqual([n, n, HISTORY_ROWS, 1005]);
+    expect(lines[0].slice(lines[0].indexOf(",") + 1)).toBe(csvRow(1000, r));
+    expect(lines[n - 1]).toBe(csvLine(1000 + n - 1, r));
+    expect(lg.csv().trim().split("\n").at(-1)).toBe(lines[n - 1]);
+    lg.clear();
+    expect([lg.count, lg.rows.length]).toEqual([0, 0]);
   });
 });
 

@@ -60,6 +60,22 @@ def test_logger_interval_and_csv():
     assert lg.offer(5.0, r, send_mode=True) and lg.offer(5.1, r, send_mode=True)  # SEND: every frame
 
 
+def test_logger_sink_keeps_every_row_and_trims_memory():
+    lines = []
+    lg = model.Logger(sink=lines.append)
+    lg.start()
+    r = frame(VDC)
+    n = model.HISTORY_ROWS + 5
+    for k in range(n):
+        lg.offer(1000.0 + k, r, send_mode=True)
+    assert lg.count == len(lines) == n
+    assert len(lg.rows) == model.HISTORY_ROWS and lg.rows[0][0] == 1005.0
+    assert lines[0].split(",", 1)[1] == p.csv_row(1000.0, r)
+    assert lines[-1] == model.csv_line(1000.0 + n - 1, r) == lg.csv().splitlines()[-1]
+    lg.clear()
+    assert lg.count == 0 and not lg.rows
+
+
 def test_nice_ceil():
     assert [model.nice_ceil(x) for x in (0, 0.9, 1, 1.1, 2.1, 5, 5.1, 40, 0.03)] == [1, 1, 1, 2, 5, 5, 10, 50, 0.05]
 
