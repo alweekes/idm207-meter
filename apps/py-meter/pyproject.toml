@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "idm207-meter"
-version = "1.0.2"
+version = "1.1.0"
 description = "Virtual meter and datalogger for the ISO-TECH IDM207 (APPA 300 series) over RS232"
 requires-python = ">=3.10"
 dependencies = ["PyQt6>=6.5", "pyqtgraph>=0.13", "pyserial>=3.5"]
