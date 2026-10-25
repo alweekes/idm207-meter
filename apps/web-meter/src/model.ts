@@ -138,6 +138,7 @@ export function isoLocal(epochSeconds: number): string {
 }
 
 export const HISTORY_ROWS = 2000; // rows kept in memory (and in the history list) while logging to a file
+export const TICK_SLACK = 0.1; // s; a reading this much before the next tick still counts (timestamps jitter by ~1 ms)
 
 export const csvHeader = () => "iso_time," + CSV_HEADER;
 export const csvLine = (t: number, r: Reading) => `${isoLocal(t)},${csvRow(t, r)}`;
@@ -170,8 +171,8 @@ export class Logger {
   offer(t: number, r: Reading, sendMode = false): boolean {
     if (!this.running) return false;
     if (!sendMode) {
-      if (t - this.lastTick < this.interval - 1e-6) return false;
-      // stay on the interval grid even if readings arrive a little late
+      if (t - this.lastTick < this.interval - TICK_SLACK) return false;
+      // stay on the interval grid even if readings arrive a little early or late
       this.lastTick = t - this.lastTick > 2 * this.interval ? t : this.lastTick + this.interval;
     }
     if (t === this.lastFrameT) return false;

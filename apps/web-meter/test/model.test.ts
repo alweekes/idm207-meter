@@ -54,6 +54,18 @@ describe("model", () => {
     expect(logged).toEqual([1000, 1300, 1600, 1900]);
   });
 
+  it("logger keeps a reading that arrives slightly before the tick", () => {
+    // timings seen on the meter: a reading 1 ms before the tick must not shift the row half a second
+    const r = frame(VDC);
+    let lg = new Logger(1);
+    lg.start();
+    expect([14.517, 15.017, 15.516, 16.016, 16.517, 17.017].filter((t) => lg.offer(t, r))).toEqual([14.517, 15.516, 16.517]);
+    lg = new Logger(0.5);
+    lg.start();
+    const times = [1000, 1000.5, 1000.999, 1001.5, 1002];
+    expect(times.filter((t) => lg.offer(t, r))).toEqual(times); // 0.5 s: no row lost
+  });
+
   it("logger with a sink writes every row and keeps only the last HISTORY_ROWS in memory", () => {
     const lines: string[] = [];
     const lg = new Logger();

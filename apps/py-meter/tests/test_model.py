@@ -100,3 +100,16 @@ def test_logger_long_interval():
     r = frame(VDC)
     logged = [t for t in (1000.0 + 0.5 * k for k in range(2 * 1200)) if lg.offer(t, r)]   # 20 min at 2 Hz
     assert logged == [1000.0, 1300.0, 1600.0, 1900.0]
+
+
+def test_logger_reading_slightly_early():
+    # timings seen on the meter: a reading 1 ms before the tick must not shift the row half a second
+    lg = model.Logger(interval=1.0)
+    lg.start()
+    r = frame(VDC)
+    logged = [t for t in (14.517, 15.017, 15.516, 16.016, 16.517, 17.017) if lg.offer(t, r)]
+    assert logged == [14.517, 15.516, 16.517]
+    lg = model.Logger(interval=0.5)
+    lg.start()
+    logged = [t for t in (1000.0, 1000.5, 1000.999, 1001.5, 1002.0) if lg.offer(t, r)]
+    assert logged == [1000.0, 1000.5, 1000.999, 1001.5, 1002.0]   # 0.5 s: no row lost

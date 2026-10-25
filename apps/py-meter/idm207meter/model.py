@@ -138,6 +138,7 @@ class ArcScale:
 
 
 HISTORY_ROWS = 2000  # rows kept in memory (and in the history list) while logging to a file
+TICK_SLACK = 0.1  # s; a reading this much before the next tick still counts (timestamps jitter by ~1 ms)
 
 
 def csv_header():
@@ -177,9 +178,9 @@ class Logger:
         if not self.running:
             return False
         if not send_mode:
-            if t - self._last_tick < self.interval - 1e-6:
+            if t - self._last_tick < self.interval - TICK_SLACK:
                 return False
-            # stay on the interval grid even if readings arrive a little late
+            # stay on the interval grid even if readings arrive a little early or late
             self._last_tick = t if t - self._last_tick > 2 * self.interval else self._last_tick + self.interval
         if t == self._last_frame_t:
             return False

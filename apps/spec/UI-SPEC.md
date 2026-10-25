@@ -69,6 +69,8 @@ can be compared like for like. Protocol details: `reverse-engineering/README.md`
 ## Logging
 - Interval 0.5 / 1 / 2 / 5 / 10 / 30 s, 1 / 2 / 5 / 10 / 15 / 30 min, 1 h (labelled like that): on each tick record the latest reading (if newer than the
   last recorded one). In SEND mode every received frame is recorded instead.
+  Ticks stay on a fixed grid from Start; a reading up to 0.1 s before a tick counts for that tick (meter
+  timestamps jitter by about 1 ms, so an exact comparison would push rows half a second off the grid).
 - Rows kept in memory (runs of minutes to hours). Start / Stop / Clear; row counter (rows since Clear).
 - **Log to file** (for long runs, hours to days): when ticked, Start asks for a file (default
   `idm207-log-YYYYMMDD-HHMMSS.csv`; cancel = not started), writes the CSV header and then every logged row in

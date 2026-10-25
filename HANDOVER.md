@@ -50,13 +50,27 @@ Web app (Chrome / Edge):
       `brave://flags/#file-system-access-api`.
 - [ ] A CSV from the web app and one from the desktop app have identical columns and formatting.
 
+## Tested on the meter (2026-10-25, Temp C)
+
+- Desktop, 10 s interval: header and first row at Start, rows on disk while running, no missing or doubled rows,
+  no rows while the meter was off and logging carried on after, file complete after closing the window.
+- Web (Chrome): real save dialog works, file grows every 5 s, columns and header identical to the desktop CSV,
+  reload mid-run keeps the file intact (see page-close note below).
+- Not yet: values checked against the LCD, 1 s and 1 min desktop runs, overnight run, Brave flag message.
+
 ## Known issues and ideas
 
 - **Chart memory**: the chart (`Series`) still keeps every reading of the current run (~170k points a day at
   2 Hz), and the "all" window redraws all of them. Multi-day runs may get sluggish. Fix: cap or thin the series.
-- **0.5 s interval skips some rows**: in the web replay test some rows were 1 s apart at the 0.5 s interval. This
-  probably comes from readings arriving a little before the next 0.5 s mark, in `Logger.offer`, which this branch
-  didn't change. Check whether it also happens with the real meter.
+- **Rows off the grid / skipped at 0.5 s (fixed 2026-10-25, retest on the meter)**: on the meter at 1 s, about
+  every 7 s one row was missing and an extra one was logged 0.5 s later. Cause (reproduced in a test): meter
+  timestamps jitter by ~1 ms and `Logger.offer` compared against the tick with only 1e-6 s slack, so a reading
+  1 ms early was rejected. Fix: `TICK_SLACK = 0.1` s in `model.py` / `model.ts`, tests in both suites, spec note.
+- **Page-close flush probably doesn't run** (web, accepted as is): on two reloads during logging the last write
+  was the regular 5 s one, with nothing at the reload. The async write started on `pagehide` (`main.ts`) is likely
+  killed by Chrome. Loss stays within the 5 s documented above.
+- **Blank `Ohm` row after power-on**: switching the meter off and on mid-run logged one row with function `Ohm`
+  and no values, then normal readings. Probably the meter's start-up frame (raw frame not captured).
 - **"Log saved to …" status disappears at once** when connected over serial: the 250 ms status update overwrites
   it. The same already happens to Export CSV's "Saved N rows" message.
 - **Idea**: add min, max and mean columns for each interval (each row is currently a single reading taken at that
